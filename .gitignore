@@ -27,3 +27,19 @@ node_modules/
 
 # Build files
 dist/
+
+# Uploaded media
+backend/uploads/*
+!backend/uploads/.gitkeep# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Build files
+dist/

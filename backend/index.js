@@ -18,9 +18,12 @@ const createContactRouter = require('./routes/contact');
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
 
-const mongoUri =
-  process.env.MONGODB_URI ||
-  'mongodb://127.0.0.1:27017/gospelhub';
+const mongoUri = process.env.MONGODB_URI;
+
+if (!mongoUri) {
+  console.error('ERROR: MONGODB_URI is not configured.');
+  process.exit(1);
+}
 
 // Upload directories
 const uploadsRoot = path.join(__dirname, 'uploads');
@@ -42,19 +45,20 @@ app.use(
   })
 );
 
-
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://10.15.96.118:5173',
+  'http://10.42.0.1:5173',
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://10.15.96.118:5173',
-      'http://10.42.0.1:5173'
-    ]
+    origin: allowedOrigins
   })
 );
-
 
 // Middleware
 app.use(express.json({ limit: '1mb' }));
@@ -68,23 +72,24 @@ app.use(
   })
 );
 
-// MongoDB connection
+// MongoDB connection using Monk
 const db = monk(mongoUri);
 app.locals.db = db;
 
-// Health check
+// MongoDB health check
 app.get('/api/health', async (req, res) => {
   try {
-    await db.command({ ping: 1 });
+    // Query MongoDB through Monk
+    await db.get('songs').findOne({});
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: 'GospelHub API and MongoDB are ready'
     });
   } catch (error) {
     console.error('MongoDB health check failed:', error.message);
 
-    res.status(503).json({
+    return res.status(503).json({
       success: false,
       message: 'API is running but MongoDB is unavailable'
     });
@@ -134,8 +139,7 @@ app.use((err, req, res, next) => {
 
 // Start server
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`GospelHub API: http://localhost:${PORT}`);
-  console.log(`Network API: http://10.15.96.118:${PORT}`);
+  console.log(`GospelHub API running on port ${PORT}`);
 });
 
 // Graceful shutdown
